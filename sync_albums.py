@@ -3,6 +3,7 @@ import imaplib
 import os
 import re
 import ssl
+import time
 from email.header import decode_header, make_header
 from html import unescape
 from typing import Optional, Tuple
@@ -21,6 +22,7 @@ YT_CLIENT_SECRET = os.environ["YT_CLIENT_SECRET"]
 YTMUSIC_AUTH_FILE = os.getenv("YTMUSIC_AUTH_FILE", "oauth.json")
 
 MIN_MATCH_SCORE = int(os.getenv("MIN_MATCH_SCORE", "5"))
+MAX_EMAILS_PER_RUN = int(os.getenv("MAX_EMAILS_PER_RUN", "50"))
 
 
 def log(msg: str) -> None:
@@ -100,7 +102,7 @@ def clean_capture(value: str) -> str:
 def extract_artist_album(text: str) -> Tuple[Optional[str], Optional[str]]:
     # muspy-style: "[muspy] New Release: Artist - Album"
     muspy_match = re.search(
-        r'(?i)\[muspy\]\s*New Release:\s*(?P<artist>.+?)\s*-\s*(?P<album>.+?)$',
+        r'(?i)\[muspy\]\s*New Release:\s*(?P<artist>.+?)\s*[-\u2013]\s*(?P<album>.+?)$',
         text,
         re.MULTILINE,
     )
@@ -249,6 +251,10 @@ def main() -> None:
         uids = search_target_emails(mail)
         log(f"Found {len(uids)} unread labeled email(s).")
 
+        # Cap per run to avoid hammering the API
+        uids = uids[:MAX_EMAILS_PER_RUN]
+        log(f"Processing up to {MAX_EMAILS_PER_RUN} emails this run.")
+
         for uid in uids:
             msg = fetch_message(mail, uid)
             if msg is None:
@@ -265,6 +271,7 @@ def main() -> None:
             artist, album = extract_artist_album(text)
             if not artist or not album:
                 log("Could not parse artist/album. Leaving unread.")
+                time.sleep(1)
                 continue
 
             log(f"Parsed artist: {artist}")
@@ -273,6 +280,7 @@ def main() -> None:
             match = best_album_match(ytmusic, artist, album)
             if not match:
                 log("No confident YouTube Music match found. Leaving unread.")
+                time.sleep(2)
                 continue
 
             playlist_id = match["playlistId"]
@@ -284,6 +292,7 @@ def main() -> None:
 
             mark_seen(mail, uid)
             log("Marked email as read.")
+            time.sleep(2)
 
     finally:
         mail.logout()
