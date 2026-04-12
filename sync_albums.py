@@ -93,7 +93,7 @@ def extract_email_text(msg) -> str:
 
 def clean_capture(value: str) -> str:
     value = value.strip().strip("-–:|,.; ")
-    value = value.strip("\"'"\u201c\u201d")
+    value = value.strip("\"'\u201c\u201d")
     return value
 
 
