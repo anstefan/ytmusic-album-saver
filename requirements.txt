@@ -1,0 +1,2 @@
+ytmusicapi
+beautifulsoup4
