@@ -92,14 +92,26 @@ def extract_email_text(msg) -> str:
 
 
 def clean_capture(value: str) -> str:
-    value = value.strip().strip("-–:|,.; ")
+    value = value.strip().strip("-\u2013:|,.; ")
     value = value.strip("\"'\u201c\u201d")
     return value
 
 
 def extract_artist_album(text: str) -> Tuple[Optional[str], Optional[str]]:
+    # muspy-style: "[muspy] New Release: Artist - Album"
+    muspy_match = re.search(
+        r'(?i)\[muspy\]\s*New Release:\s*(?P<artist>.+?)\s*-\s*(?P<album>.+?)$',
+        text,
+        re.MULTILINE,
+    )
+    if muspy_match:
+        artist = clean_capture(muspy_match.group("artist"))
+        album = clean_capture(muspy_match.group("album"))
+        if artist and album:
+            return artist, album
+
     patterns = [
-        r'(?im)^(?P<artist>[^:\n]{2,80})\s*[-–:]\s*["\u201c](?P<album>[^"\n\u201d]{2,120})["\u201d]\s*(?:is out now|out now|new album|album release)?\s*$',
+        r'(?im)^(?P<artist>[^:\n]{2,80})\s*[-\u2013:]\s*["\u201c](?P<album>[^"\n\u201d]{2,120})["\u201d]\s*(?:is out now|out now|new album|album release)?\s*$',
         r'(?im)^new album from\s+(?P<artist>[^\n:]{2,80})[:\s-]+["\u201c]?(?P<album>[^\n"\u201d]{2,120})["\u201d]?\s*$',
         r'(?im)^(?P<artist>[^\n]{2,80})\s+released\s+["\u201c](?P<album>[^"\n\u201d]{2,120})["\u201d]',
         r'(?is)\b(?P<artist>[A-Z0-9][A-Za-z0-9 &+!\'\-.]{1,80})\b.{0,80}?\bnew album\b.{0,40}?["\u201c](?P<album>[^"\n\u201d]{2,120})["\u201d]',
@@ -114,12 +126,13 @@ def extract_artist_album(text: str) -> Tuple[Optional[str], Optional[str]]:
             if artist and album:
                 return artist, album
 
+    # Fallback: subject line
     subject_match = re.search(r"(?im)^subject:\s*(.+)$", text)
     if subject_match:
         subject = subject_match.group(1).strip()
         subject_patterns = [
-            r'(?i)(?P<artist>.+?)\s*[-–:]\s*["\u201c]?(?P<album>.+?)["\u201d]?\s*(?:out now|new album|album release|released)?$',
-            r'(?i)new album from\s+(?P<artist>.+?)\s*[-–:]\s*["\u201c]?(?P<album>.+?)["\u201d]?$',
+            r'(?i)^(?P<artist>.+?)\s*[-\u2013]\s*(?P<album>.+?)$',
+            r'(?i)new album from\s+(?P<artist>.+?)\s*[-\u2013:]\s*["\u201c]?(?P<album>.+?)["\u201d]?$',
         ]
         for pattern in subject_patterns:
             match = re.search(pattern, subject)
@@ -170,7 +183,11 @@ def score_album_result(result: dict, target_artist: str, target_album: str) -> i
 
 def best_album_match(ytmusic: YTMusic, artist: str, album: str) -> Optional[dict]:
     query = f"{artist} {album}"
-    results = ytmusic.search(query, filter="albums", limit=10)
+    try:
+        results = ytmusic.search(query, filter="albums", limit=10)
+    except Exception as e:
+        log(f"YouTube Music search failed: {e}")
+        return None
 
     target_artist = normalize(artist)
     target_album = normalize(album)
