@@ -19,7 +19,7 @@ jobs:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: pip install --no-cache-dir -r requirements.txt
 
       - name: Write oauth.json
         run: echo "${{ secrets.YTMUSIC_OAUTH_B64 }}" | base64 -d > oauth.json
