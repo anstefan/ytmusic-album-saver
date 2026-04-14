@@ -24,6 +24,22 @@ jobs:
       - name: Write oauth.json
         run: echo "${{ secrets.YTMUSIC_OAUTH_B64 }}" | base64 -d > oauth.json
 
+      - name: Debug ytmusicapi version
+        run: python -c "import ytmusicapi; print(ytmusicapi.__version__)"
+
+      - name: Test YTMusic search
+        env:
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YTMUSIC_AUTH_FILE: oauth.json
+        run: |
+          python3 -c "
+from ytmusicapi import YTMusic, OAuthCredentials
+yt = YTMusic('oauth.json', oauth_credentials=OAuthCredentials(client_id='${{ secrets.YT_CLIENT_ID }}', client_secret='${{ secrets.YT_CLIENT_SECRET }}'))
+results = yt.search('Kanye West Vultures', filter='albums', limit=3)
+print(results)
+"
+
       - name: Run sync
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
@@ -33,4 +49,5 @@ jobs:
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
           YTMUSIC_AUTH_FILE: oauth.json
           MIN_MATCH_SCORE: "5"
+          MAX_EMAILS_PER_RUN: "50"
         run: python sync_albums.py
