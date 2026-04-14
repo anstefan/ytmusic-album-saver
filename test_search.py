@@ -1,17 +1,18 @@
 import os
 import json
+import logging
 from ytmusicapi import YTMusic, OAuthCredentials
 
-# Debug: print oauth.json contents
+# Enable debug logging
+logging.basicConfig(level=logging.DEBUG)
+
+# Print oauth.json contents
 with open("oauth.json") as f:
-    contents = f.read()
-    print(f"oauth.json length: {len(contents)}")
-    try:
-        parsed = json.loads(contents)
-        print(f"oauth.json keys: {list(parsed.keys())}")
-    except Exception as e:
-        print(f"oauth.json is NOT valid JSON: {e}")
-        print(f"First 200 chars: {contents[:200]}")
+    parsed = json.load(f)
+    print(f"oauth.json keys: {list(parsed.keys())}")
+    print(f"token_type: {parsed.get('token_type')}")
+    print(f"scope: {parsed.get('scope')}")
+    print(f"expires_at: {parsed.get('expires_at')}")
 
 yt = YTMusic(
     "oauth.json",
