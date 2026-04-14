@@ -1,4 +1,3 @@
-import os
 import json
 import logging
 from ytmusicapi import YTMusic
