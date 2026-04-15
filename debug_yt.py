@@ -2,13 +2,10 @@ import os
 import json
 import time
 import requests
-from ytmusicapi import YTMusic, OAuthCredentials
 
-# Force refresh token manually
+# Force refresh token
 with open("oauth.json") as f:
     oauth = json.load(f)
-
-print(f"Token expired: {oauth['expires_at'] < time.time()}")
 
 refresh = requests.post(
     "https://oauth2.googleapis.com/token",
@@ -19,28 +16,33 @@ refresh = requests.post(
         "grant_type": "refresh_token",
     }
 )
-
 new_token = refresh.json()
-print(f"New token prefix: {new_token['access_token'][:30]}...")
+access_token = new_token["access_token"]
+print(f"Fresh token: {access_token[:30]}...")
 
-# Update oauth.json with fresh token
-oauth["access_token"] = new_token["access_token"]
-oauth["expires_at"] = int(time.time()) + new_token["expires_in"]
+# Test directly with fresh token
+headers = {
+    "Authorization": f"Bearer {access_token}",
+    "Content-Type": "application/json",
+    "Origin": "https://music.youtube.com",
+    "Referer": "https://music.youtube.com/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+}
 
-with open("oauth.json", "w") as f:
-    json.dump(oauth, f)
+body = {
+    "context": {
+        "client": {
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20220918.01.00",
+            "hl": "en",
+            "gl": "US",
+        },
+        "user": {}
+    },
+    "query": "Adele Hello"
+}
 
-print("oauth.json updated with fresh token")
-
-# Now initialize ytmusicapi
-yt = YTMusic(
-    "oauth.json",
-    oauth_credentials=OAuthCredentials(
-        client_id=os.environ["YT_CLIENT_ID"],
-        client_secret=os.environ["YT_CLIENT_SECRET"],
-    ),
-)
-
-results = yt.search("Adele Hello", filter="albums", limit=3)
-print(f"Found {len(results)} results")
-print(results[0] if results else "No results")
+url = "https://music.youtube.com/youtubei/v1/search?alt=json&key=AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30"
+response = requests.post(url, headers=headers, json=body)
+print(f"Status: {response.status_code}")
+print(f"Response: {response.text[:1000]}")
