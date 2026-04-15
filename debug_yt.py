@@ -1,17 +1,24 @@
 import os
 import json
 import requests
-from ytmusicapi import YTMusic, OAuthCredentials
 
-yt = YTMusic(
-    "oauth.json",
-    oauth_credentials=OAuthCredentials(
-        client_id=os.environ["YT_CLIENT_ID"],
-        client_secret=os.environ["YT_CLIENT_SECRET"],
-    ),
-)
+# Read token directly from oauth.json
+with open("oauth.json") as f:
+    oauth = json.load(f)
 
-# Override with known working client version
+token = oauth["access_token"]
+print(f"Token prefix: {token[:20]}...")
+
+headers = {
+    "Authorization": f"Bearer {token}",
+    "Content-Type": "application/json",
+    "Origin": "https://music.youtube.com",
+    "Referer": "https://music.youtube.com/",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+    "X-Youtube-Client-Name": "67",
+    "X-Youtube-Client-Version": "1.20220918.01.00",
+}
+
 body = {
     "context": {
         "client": {
@@ -19,7 +26,6 @@ body = {
             "clientVersion": "1.20220918.01.00",
             "hl": "en",
             "gl": "US",
-            "visitorData": yt.headers.get("X-Goog-Visitor-Id", ""),
         },
         "user": {}
     },
@@ -27,9 +33,6 @@ body = {
 }
 
 url = "https://music.youtube.com/youtubei/v1/search?alt=json&key=AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30"
-
-print(f"Request body: {json.dumps(body, indent=2)}")
-
-response = requests.post(url, headers=yt.headers, json=body)
+response = requests.post(url, headers=headers, json=body)
 print(f"Status: {response.status_code}")
 print(f"Response: {response.text[:3000]}")
