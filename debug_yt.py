@@ -1,8 +1,6 @@
 import os
-import json
 import requests
 from ytmusicapi import YTMusic, OAuthCredentials
-from ytmusicapi.constants import YTM_BASE_API, YTM_PARAMS, YTM_PARAMS_KEY
 
 yt = YTMusic(
     "oauth.json",
@@ -12,10 +10,8 @@ yt = YTMusic(
     ),
 )
 
-print(f"headers: {yt.headers}")
-
 body = {"context": yt.context["context"], "query": "Adele Hello"}
-url = f"{YTM_BASE_API}search?{YTM_PARAMS}&key={YTM_PARAMS_KEY}"
+url = "https://music.youtube.com/youtubei/v1/search?alt=json&key=AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30"
 print(f"URL: {url}")
 
 response = requests.post(url, headers=yt.headers, json=body)
