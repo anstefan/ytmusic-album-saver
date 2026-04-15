@@ -9,10 +9,5 @@ yt = YTMusic(
     ),
 )
 
-# Hardcode a known visitor_data value
-yt.context["client"]["visitorData"] = "CgtDSkFYeG8yY0FUNCiDt7e2BjIKCgJVUxIEGgAgYQ%3D%3D"
-print(f"visitor_data set: {yt.context['client']['visitorData']}")
-
-results = yt.search("Adele Hello", filter="albums", limit=3)
-print(f"Found {len(results)} results")
-print(results[0] if results else "No results")
+print(f"context keys: {list(yt.context.keys())}")
+print(f"full context: {yt.context}")
