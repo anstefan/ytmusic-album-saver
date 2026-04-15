@@ -2,37 +2,26 @@ import os
 import json
 import requests
 
-# Read token directly from oauth.json
+# Read oauth.json
 with open("oauth.json") as f:
     oauth = json.load(f)
 
-token = oauth["access_token"]
-print(f"Token prefix: {token[:20]}...")
+print(f"Current access_token prefix: {oauth['access_token'][:20]}...")
+print(f"expires_at: {oauth['expires_at']}")
 
-headers = {
-    "Authorization": f"Bearer {token}",
-    "Content-Type": "application/json",
-    "Origin": "https://music.youtube.com",
-    "Referer": "https://music.youtube.com/",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "X-Youtube-Client-Name": "67",
-    "X-Youtube-Client-Version": "1.20220918.01.00",
-}
+# Force refresh the token
+client_id = os.environ["YT_CLIENT_ID"]
+client_secret = os.environ["YT_CLIENT_SECRET"]
 
-body = {
-    "context": {
-        "client": {
-            "clientName": "WEB_REMIX",
-            "clientVersion": "1.20220918.01.00",
-            "hl": "en",
-            "gl": "US",
-        },
-        "user": {}
-    },
-    "query": "Adele Hello"
-}
+refresh_response = requests.post(
+    "https://oauth2.googleapis.com/token",
+    data={
+        "client_id": client_id,
+        "client_secret": client_secret,
+        "refresh_token": oauth["refresh_token"],
+        "grant_type": "refresh_token",
+    }
+)
 
-url = "https://music.youtube.com/youtubei/v1/search?alt=json&key=AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30"
-response = requests.post(url, headers=headers, json=body)
-print(f"Status: {response.status_code}")
-print(f"Response: {response.text[:3000]}")
+print(f"Refresh status: {refresh_response.status_code}")
+print(f"Refresh response: {refresh_response.text}")
