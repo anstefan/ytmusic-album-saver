@@ -1,2 +1,2 @@
-ytmusicapi==1.10.3
+ytmusicapi
 beautifulsoup4

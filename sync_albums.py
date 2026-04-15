@@ -9,7 +9,7 @@ from html import unescape
 from typing import Optional, Tuple
 
 from bs4 import BeautifulSoup
-from ytmusicapi import OAuthCredentials, YTMusic
+from ytmusicapi import YTMusic
 
 
 GMAIL_HOST = "imap.gmail.com"
@@ -17,10 +17,7 @@ GMAIL_USER = os.environ["GMAIL_USER"]
 GMAIL_APP_PASSWORD = os.environ["GMAIL_APP_PASSWORD"]
 GMAIL_QUERY = os.getenv("GMAIL_QUERY", "label:album-release is:unread")
 
-YT_CLIENT_ID = os.environ["YT_CLIENT_ID"]
-YT_CLIENT_SECRET = os.environ["YT_CLIENT_SECRET"]
-YTMUSIC_AUTH_FILE = os.getenv("YTMUSIC_AUTH_FILE", "oauth.json")
-
+YTMUSIC_AUTH_FILE = os.getenv("YTMUSIC_AUTH_FILE", "browser.json")
 MIN_MATCH_SCORE = int(os.getenv("MIN_MATCH_SCORE", "5"))
 MAX_EMAILS_PER_RUN = int(os.getenv("MAX_EMAILS_PER_RUN", "50"))
 
@@ -238,20 +235,13 @@ def mark_seen(mail, uid: bytes) -> None:
 
 
 def main() -> None:
-    ytmusic = YTMusic(
-        YTMUSIC_AUTH_FILE,
-        oauth_credentials=OAuthCredentials(
-            client_id=YT_CLIENT_ID,
-            client_secret=YT_CLIENT_SECRET,
-        ),
-    )
+    ytmusic = YTMusic(YTMUSIC_AUTH_FILE)
 
     mail = connect_gmail()
     try:
         uids = search_target_emails(mail)
         log(f"Found {len(uids)} unread labeled email(s).")
 
-        # Cap per run to avoid hammering the API
         uids = uids[:MAX_EMAILS_PER_RUN]
         log(f"Processing up to {MAX_EMAILS_PER_RUN} emails this run.")
 
@@ -287,11 +277,14 @@ def main() -> None:
             log(f"Matched album: {artist_names_from_result(match)} - {match.get('title')}")
             log(f"playlistId: {playlist_id}")
 
-            response = ytmusic.rate_playlist(playlist_id, "LIKE")
-            log(f"Added album to library. API response: {response}")
+            try:
+                response = ytmusic.rate_playlist(playlist_id, "LIKE")
+                log(f"Added album to library.")
+                mark_seen(mail, uid)
+                log("Marked email as read.")
+            except Exception as e:
+                log(f"Failed to save album: {e}")
 
-            mark_seen(mail, uid)
-            log("Marked email as read.")
             time.sleep(2)
 
     finally:
