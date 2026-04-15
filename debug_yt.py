@@ -2,8 +2,10 @@ import os
 import json
 import time
 import requests
+import unittest.mock as mock
+from ytmusicapi import YTMusic, OAuthCredentials
 
-# Refresh token
+# Refresh token first
 with open("oauth.json") as f:
     oauth = json.load(f)
 
@@ -16,36 +18,29 @@ refresh = requests.post(
         "grant_type": "refresh_token",
     }
 )
-token = refresh.json()["access_token"]
-print(f"Fresh token: {token[:30]}...")
+oauth["access_token"] = refresh.json()["access_token"]
+oauth["expires_at"] = int(time.time()) + 3599
+with open("oauth.json", "w") as f:
+    json.dump(oauth, f)
 
-headers = {
-    "Authorization": f"Bearer {token}",
-    "Content-Type": "application/json",
-    "Origin": "https://music.youtube.com",
-    "Referer": "https://music.youtube.com/",
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-    "X-Goog-AuthUser": "0",
-}
+yt = YTMusic(
+    "oauth.json",
+    oauth_credentials=OAuthCredentials(
+        client_id=os.environ["YT_CLIENT_ID"],
+        client_secret=os.environ["YT_CLIENT_SECRET"],
+    ),
+)
 
-# rate_playlist body - LIKE = add to library
-body = {
-    "context": {
-        "client": {
-            "clientName": "WEB_REMIX",
-            "clientVersion": "1.20220918.01.00",
-            "hl": "en",
-            "gl": "US",
-        },
-        "user": {}
-    },
-    "target": {
-        "playlistId": "OLAK5uy_l6pEkEJgy577R-ySAoobVoHRCok9VNDCY"
-    },
-    "rating": "LIKE"
-}
+# Intercept _send_request to see what it's sending
+original_send = yt._send_request
+def debug_send(endpoint, body):
+    print(f"Endpoint: {endpoint}")
+    print(f"Body: {json.dumps(body, indent=2)}")
+    return original_send(endpoint, body)
 
-url = "https://music.youtube.com/youtubei/v1/like/playlist?alt=json&key=AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30"
-response = requests.post(url, headers=headers, json=body)
-print(f"Status: {response.status_code}")
-print(f"Response: {response.text[:2000]}")
+yt._send_request = debug_send
+
+try:
+    yt.rate_playlist("OLAK5uy_l6pEkEJgy577R-ySAoobVoHRCok9VNDCY", "LIKE")
+except Exception as e:
+    print(f"Error: {e}")
