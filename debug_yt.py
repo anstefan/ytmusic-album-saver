@@ -1,7 +1,19 @@
 import os
 import json
 import time
+import re
 import requests
+
+# Get visitorData from YouTube Music homepage
+home = requests.get(
+    "https://music.youtube.com",
+    headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+)
+visitor_data = None
+match = re.search(r'"visitorData"\s*:\s*"([^"]+)"', home.text)
+if match:
+    visitor_data = match.group(1)
+print(f"visitorData: {visitor_data}")
 
 # Refresh token
 with open("oauth.json") as f:
@@ -17,7 +29,6 @@ refresh = requests.post(
     }
 )
 token = refresh.json()["access_token"]
-print(f"Fresh token: {token[:30]}...")
 
 headers = {
     "Authorization": f"Bearer {token}",
@@ -26,6 +37,7 @@ headers = {
     "Referer": "https://music.youtube.com/",
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
     "X-Goog-AuthUser": "0",
+    "X-Goog-Visitor-Id": visitor_data or "",
 }
 
 body = {
@@ -35,6 +47,7 @@ body = {
             "clientVersion": "1.20220918.01.00",
             "hl": "en",
             "gl": "US",
+            "visitorData": visitor_data or "",
         },
         "user": {}
     },
