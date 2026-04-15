@@ -31,7 +31,7 @@ jobs:
         env:
           YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
           YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
-        run: python test_search.py
+        run: python debug_yt.py
 
       - name: Run sync
         env:
