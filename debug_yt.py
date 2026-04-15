@@ -11,11 +11,24 @@ yt = YTMusic(
     ),
 )
 
-body = {"context": yt.context["context"], "query": "Adele Hello"}
+# Override with known working client version
+body = {
+    "context": {
+        "client": {
+            "clientName": "WEB_REMIX",
+            "clientVersion": "1.20220918.01.00",
+            "hl": "en",
+            "gl": "US",
+            "visitorData": yt.headers.get("X-Goog-Visitor-Id", ""),
+        },
+        "user": {}
+    },
+    "query": "Adele Hello"
+}
+
 url = "https://music.youtube.com/youtubei/v1/search?alt=json&key=AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30"
 
 print(f"Request body: {json.dumps(body, indent=2)}")
-print(f"Headers: {json.dumps({k: v for k, v in yt.headers.items() if k != 'authorization'}, indent=2)}")
 
 response = requests.post(url, headers=yt.headers, json=body)
 print(f"Status: {response.status_code}")
